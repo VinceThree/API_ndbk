@@ -1,59 +1,60 @@
 const db = require("../models");
-const User = db.user;
+const Playlist = db.playlist;
+const Song =db.song;
+const User =db.user;
 const Op = db.Sequelize.Op;
 
 const getPagination = (page, size) => {
-    const limit = size ? +size : 3;
+    const limit = size ? +size : 10;
     const offset = page ? page * limit : 0;
+
     return { limit, offset };
 };
 
 const getPagingData = (data, page, limit) => {
-    const { count: totalItems, rows: users } = data;
+    const { count: totalItems, rows: songs } = data;
     const currentPage = page ? +page : 0;
     const totalPages = Math.ceil(totalItems / limit);
 
-    return { totalItems, users, totalPages, currentPage };
+    return { totalItems, songs, totalPages, currentPage };
 };
 
-// Create and Save a new User
+// Create and Save a new Playlist
 exports.create = (req, res) => {
-    // Validate request
-    if (!req.body.name) {
-        res.status(400).send({
-            message: "Content can not be empty!"
-        });
-        return;
-    }
-
-    // Create a User
-    const user = {
-        name: req.body.name,
-        gender: req.body.gender,
-    };
-
-    // Save Tutorial in the database
-    User.create(user)
-        .then(data => {
-            res.send(data);
+    if(req.body.title && req.body.artist){
+        Song.create(req.body).then(data => {
+            res.send({message: "Song was created successfully."});
         })
-        .catch(err => {
-            res.status(500).send({
-                message:
-                    err.message || "Some error occurred while creating the Tutorial."
+            .catch(err => {
+                res.status(500).send({
+                    message: "Error creating Song with id"
+                });
             });
-        });
-};
+    };
+}
 
 // Retrieve all User from the database.
 exports.findAll = (req, res) => {
-    const { page, size, name } = req.query;
-    var condition = name ? { name: { [Op.like]: `%${name}%` } } : null;
+    const { page, size, title , artist } = req.query;
+    var condition = title ? { title: { [Op.like]: `%${title}%` } } : null;
 
+    if (title && !artist ){
+        var condition = { title: { [Op.like]: `%${title}%` } };
+    }
+    else if (artist && !title){
+        var condition =  { artist: { [Op.like]: `%${artist}%` } };
+
+    }
+    else if (title && artist) {
+        var condition = { title: { [Op.like]: `%${title}%` },artist: { [Op.like]: `%${artist}%` } };
+    }
     const { limit, offset } = getPagination(page, size);
 
-    User.findAndCountAll({ where: condition, limit, offset })
+    Song.findAndCountAll({
+        where: condition, limit, offset
+    })
         .then(data => {
+            console.log(data);
             const response = getPagingData(data, page, limit);
             res.send(response);
         })
@@ -69,7 +70,7 @@ exports.findAll = (req, res) => {
 exports.findOne = (req, res) => {
     const id = req.params.id;
 
-    User.findByPk(id)
+    Song.findByPk(id)
         .then(data => {
             res.send(data);
         })
@@ -84,50 +85,35 @@ exports.findOne = (req, res) => {
 exports.update = (req, res) => {
     const id = req.params.id;
 
-    User.update(req.body, {
+
+    Song.update(req.body, {
         where: { id: id }
     })
         .then(num => {
             if (num == 1) {
                 res.send({
-                    message: "User was updated successfully."
+                    message: "Song was updated successfully."
                 });
             } else {
                 res.send({
-                    message: `Cannot update User with id=${id}. Maybe User was not found or req.body is empty!`
+                    message: `Cannot update Song with id=${id}. Maybe User was not found or req.body is empty!`
                 });
             }
         })
         .catch(err => {
             res.status(500).send({
-                message: "Error updating User with id=" + id
+                message: "Error updating Song with id=" + id
             });
         });
 };
 
-// Delete a Tutorial with the specified id in the request
+// Delete a Song with the specified id in the request
 exports.delete = (req, res) => {
     const id = req.params.id;
-
-    User.destroy({
-        where: { id: id }
+    Song.findByPk(id).then(songEl => {
+        songEl.destroy();
     })
-        .then(num => {
-            if (num == 1) {
-                res.send({
-                    message: "USer was deleted successfully!"
-                });
-            } else {
-                res.send({
-                    message: `Cannot delete User with id=${id}. Maybe User was not found!`
-                });
-            }
-        })
-        .catch(err => {
-            res.status(500).send({
-                message: "Could not delete User with id=" + id
-            });
-        });
+
 };
 
 

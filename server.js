@@ -16,10 +16,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const db = require("./app/models");
+const initModels = require("./app/models/init-models");
 
 db.sequelize.sync()
 .then(() => {
   console.log("Synced db.");
+
 })
 .catch((err) => {
   console.log("Failed to sync db: " + err.message);
@@ -37,6 +39,9 @@ app.get("/", (req, res) => {
 
 require("./app/routes/user.routes")(app);
 require("./app/routes/playlist.routes")(app);
+require("./app/routes/song.routes")(app);
+
+
 
 // set port, listen for requests
 const PORT = process.env.PORT || 8080;
